@@ -2,6 +2,8 @@ const fs = require("fs");
 const path = require("path");
 const Tinify = require("tinify");
 const { addPath, getPathes } = require("./logger");
+let estimationNumber = 0;
+let optimisedImagesNumber = 0;
 
 const isImage = (fileName) => {
   const parts = fileName.split(".");
@@ -18,90 +20,80 @@ const forEachFileInFolderTree = async (basePath, callback) => {
   for (let i = 0; i < files.length; i++) {
     const fileDirent = files[i];
     const fileName = fileDirent.name;
-
     if (fileDirent.isFile() && isImage(fileName)) {
       await callback(basePath, fileName);
     } else if (fileDirent.isDirectory()) {
-      forEachFileInFolderTree(path.join(basePath, fileName), callback);
+      await forEachFileInFolderTree(path.join(basePath, fileName), callback);
     }
   }
 };
 
 const optimiseFolder = async (basePath) => {
   await forEachFileInFolderTree(basePath, async (path, fileName) => {
-    const response = await optimise(path, fileName);
-    tinifyErrorHandler(response);
-    console.log("Optimise result", fileName, response);
+    const err = await optimise(path, fileName);
+    if (!err) console.log("Optimised: ", fileName);
+    else if (err instanceof Tinify.AccountError) {
+      const err = await setApiKey();
+      if (err) {
+        console.log(err);
+        process.exit(1);
+      }
+    } else console.log(err);
   });
 };
 
-const tinifyErrorHandler = (err) => {
-  if (!err) return;
-  else if (err instanceof Tinify.AccountError) {
-    console.log("AccountError");
-    setApiKey();
-    // Verify your API key and account limit.
-  } else if (err instanceof Tinify.ClientError) {
-    console.log("ClientError");
-    // Check your source image and request options.
-  } else if (err instanceof Tinify.ServerError) {
-    console.log("ServerError");
-    // Temporary issue with the Tinify API.
-  } else if (err instanceof Tinify.ConnectionError) {
-    console.log("ConnectionError");
-    // A network connection error occurred.
-  } else {
-    console.log("UnknownError");
-    // Something else went wrong, unrelated to the Tinify API.
-  }
-  console.log("tinifyErrorHandler, " + err.message);
-};
-
 const optimise = async (basePath, fileName) => {
-  return new Promise(async (resolve, reject) => {
+  return new Promise(async (resolve) => {
     const imagePath = path.join(basePath, fileName);
     const exist = fs.existsSync(imagePath);
     if (getPathes().includes(imagePath)) {
       console.log("Already optimised");
       return resolve();
     }
-    if (!exist) return reject("File not found " + imagePath);
+    if (!exist) return resolve("File not found " + imagePath);
     const source = Tinify.fromFile(imagePath);
     source.toFile(imagePath, (err) => {
       if (!err) {
         resolve();
         addPath(imagePath);
+        optimisedImagesNumber++;
       } else resolve(err);
     });
   });
 };
 
 const validateKey = async (key) => {
-  Tinify.key = key;
-  const err = await Tinify.validate();
-  if (!err && Tinify.compressionCount < 500) return;
-  return "Invalid Key";
+  return new Promise((resolve) => {
+    Tinify.key = key;
+    Tinify.validate((err) => {
+      if (err instanceof Tinify.AccountError) resolve("INVALID_API_KEY");
+      else if (err) resolve(err.message);
+    });
+  });
 };
 
 const setApiKey = async (API_KEYS) => {
+  let err;
   for (let i = 0; i < API_KEYS.length; i++) {
-    const err = await validateKey(API_KEYS[i]);
-    console.log("validate", err);
+    err = await validateKey(API_KEYS[i]);
     if (!err) return;
   }
-  console.log("Out of API_KEY");
-  process.exit(1);
+  return err;
 };
 
-let estimationNumber = 0;
 module.exports.estimation = async (basePath) => {
-  await forEachFileInFolderTree(basePath, () => estimationNumber++);
+  await forEachFileInFolderTree(
+    basePath,
+    async (basePath, fileName) => estimationNumber++
+  );
   console.log(`Number of estimated images: ${estimationNumber}`);
   return estimationNumber;
 };
 
 module.exports.optimise = async (API_KEYS, basePath) => {
-  this.estimation(basePath);
-  await setApiKey(API_KEYS);
-  await optimiseFolder(basePath);
+  const err = await setApiKey(API_KEYS);
+  if (!err) {
+    await optimiseFolder(basePath);
+    return optimisedImagesNumber;
+  } else return err;
 };
