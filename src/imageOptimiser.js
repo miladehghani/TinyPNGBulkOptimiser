@@ -3,7 +3,6 @@ const { addPath, getPathes } = require("./logger");
 const fs = require("fs");
 const path = require("path");
 const Tinify = require("tinify");
-const { constants } = require("buffer");
 
 const isImage = (fileName) => {
   const parts = fileName.split(".");
