@@ -13,19 +13,26 @@ const isImage = (fileName) => {
   return false;
 };
 
-const optimiseFolder = async (basePath) => {
+const forEachFileInFolderTree = async (basePath, callback) => {
   if (!fs.existsSync(basePath)) return;
 
   const files = fs.readdirSync(basePath);
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     if (isImage(file)) {
-      const response = await optimise(file, basePath);
-      tinifyErrorHandler(response);
+      await callback(file);
     } else {
-      await optimiseFolder(path.join(basePath, file));
+      optimiseFolder(path.join(basePath, file));
     }
   }
+};
+
+const optimiseFolder = async (basePath) => {
+  await forEachFileInFolderTree(basePath, async (file) => {
+    const response = await optimise(file, basePath);
+    tinifyErrorHandler(response);
+    console.log("Optimise result", file, response);
+  });
 };
 
 const optimise = async (fileName, basePath) => {
@@ -85,7 +92,14 @@ const setApiKey = async (API_KEYS) => {
   process.exit(1);
 };
 
-module.exports = async (API_KEYS, basePath) => {
+module.exports.optimise = async (API_KEYS, basePath) => {
   await setApiKey(API_KEYS);
   await optimiseFolder(basePath);
+};
+
+let estimationNumber = 0;
+module.exports.estimation = async (basePath) => {
+  await forEachFileInFolderTree(basePath, () => estimationNumber++);
+  console.log(`Number of estimated images: ${estimationNumber}`);
+  return estimationNumber;
 };
