@@ -18,6 +18,7 @@ const forEachFileInFolderTree = async (basePath, callback) => {
   for (let i = 0; i < files.length; i++) {
     const fileDirent = files[i];
     const fileName = fileDirent.name;
+
     if (fileDirent.isFile() && isImage(fileName)) {
       await callback(basePath, fileName);
     } else if (fileDirent.isDirectory()) {
@@ -60,7 +61,6 @@ const optimise = async (basePath, fileName) => {
   return new Promise(async (resolve, reject) => {
     const imagePath = path.join(basePath, fileName);
     const exist = fs.existsSync(imagePath);
-    console.log("imagePath", imagePath);
     if (getPathes().includes(imagePath)) {
       console.log("Already optimised");
       return resolve();
@@ -69,9 +69,9 @@ const optimise = async (basePath, fileName) => {
     const source = Tinify.fromFile(imagePath);
     source.toFile(imagePath, (err) => {
       if (!err) {
-        resolve(err);
+        resolve();
         addPath(imagePath);
-      } else reject(err);
+      } else resolve(err);
     });
   });
 };
@@ -93,14 +93,15 @@ const setApiKey = async (API_KEYS) => {
   process.exit(1);
 };
 
-module.exports.optimise = async (API_KEYS, basePath) => {
-  await setApiKey(API_KEYS);
-  await optimiseFolder(basePath);
-};
-
 let estimationNumber = 0;
 module.exports.estimation = async (basePath) => {
   await forEachFileInFolderTree(basePath, () => estimationNumber++);
   console.log(`Number of estimated images: ${estimationNumber}`);
   return estimationNumber;
+};
+
+module.exports.optimise = async (API_KEYS, basePath) => {
+  this.estimation(basePath);
+  await setApiKey(API_KEYS);
+  await optimiseFolder(basePath);
 };
