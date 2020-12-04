@@ -1,4 +1,3 @@
-const { key } = require("tinify");
 const Optimise = require("./imageOptimiser");
 
 const vars = process.argv.slice(2);

@@ -14,9 +14,9 @@ const isImage = (fileName) => {
 };
 
 const optimiseFolder = async (basePath) => {
-  if (!(await fs.existsSync(basePath))) return;
+  if (!fs.existsSync(basePath)) return;
 
-  const files = (await fs.readdirSync(basePath)).slice(8);
+  const files = fs.readdirSync(basePath);
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     if (isImage(file)) {
@@ -31,11 +31,10 @@ const optimiseFolder = async (basePath) => {
 const optimise = async (fileName, basePath) => {
   return new Promise(async (resolve, reject) => {
     const imagePath = path.join(basePath, fileName);
-    const exist = await fs.existsSync(imagePath);
+    const exist = fs.existsSync(imagePath);
     if (getPathes().includes(imagePath)) return resolve();
     if (!exist) return reject("File not found");
     const source = Tinify.fromFile(imagePath);
-    console.log(imagePath);
     source.toFile(imagePath, (err) => {
       if (!err) {
         resolve(err);
