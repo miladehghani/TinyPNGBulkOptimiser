@@ -1,8 +1,7 @@
-const { addPath, getPathes } = require("./logger");
-
 const fs = require("fs");
 const path = require("path");
 const Tinify = require("tinify");
+const { addPath, getPathes } = require("./logger");
 
 const isImage = (fileName) => {
   const parts = fileName.split(".");
@@ -14,15 +13,16 @@ const isImage = (fileName) => {
 };
 
 const forEachFileInFolderTree = async (basePath, callback) => {
-  if (!fs.existsSync(basePath)) return;
+  if (!fs.lstatSync(basePath).isDirectory()) return;
 
-  const files = fs.readdirSync(basePath);
+  const files = fs.readdirSync(basePath, { withFileTypes: true });
   for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    if (isImage(file)) {
+    const fileDirent = files[i];
+    const file = fileDirent.name;
+    if (fileDirent.isFile() && isImage(file)) {
       await callback(file);
-    } else {
-      optimiseFolder(path.join(basePath, file));
+    } else if (fileDirent.isDirectory()) {
+      forEachFileInFolderTree(path.join(basePath, file), callback);
     }
   }
 };
