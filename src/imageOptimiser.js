@@ -14,33 +14,33 @@ const isImage = (fileName) => {
 
 const forEachFileInFolderTree = async (basePath, callback) => {
   if (!fs.lstatSync(basePath).isDirectory()) return;
-
   const files = fs.readdirSync(basePath, { withFileTypes: true });
   for (let i = 0; i < files.length; i++) {
     const fileDirent = files[i];
-    const file = fileDirent.name;
-    if (fileDirent.isFile() && isImage(file)) {
-      await callback(file);
+    const fileName = fileDirent.name;
+    if (fileDirent.isFile() && isImage(fileName)) {
+      await callback(basePath, fileName);
     } else if (fileDirent.isDirectory()) {
-      forEachFileInFolderTree(path.join(basePath, file), callback);
+      forEachFileInFolderTree(path.join(basePath, fileName), callback);
     }
   }
 };
 
 const optimiseFolder = async (basePath) => {
-  await forEachFileInFolderTree(basePath, async (file) => {
-    const response = await optimise(file, basePath);
+  await forEachFileInFolderTree(basePath, async (path, fileName) => {
+    const response = await optimise(path, fileName);
     tinifyErrorHandler(response);
-    console.log("Optimise result", file, response);
+    console.log("Optimise result", fileName, response);
   });
 };
 
-const optimise = async (fileName, basePath) => {
+const optimise = async (basePath, fileName) => {
   return new Promise(async (resolve, reject) => {
     const imagePath = path.join(basePath, fileName);
     const exist = fs.existsSync(imagePath);
+    console.log("imagePath", imagePath);
     if (getPathes().includes(imagePath)) return resolve();
-    if (!exist) return reject("File not found");
+    if (!exist) return reject("File not found " + imagePath);
     const source = Tinify.fromFile(imagePath);
     source.toFile(imagePath, (err) => {
       if (!err) {
