@@ -6,15 +6,15 @@ let path = "";
 let keys = [];
 for (let i = 0; i < vars.length; i++) {
   switch (vars[i]) {
-    case "--path":
+    case "path":
       path = vars[i + 1];
       break;
-    case "--keys":
+    case "keys":
       keys = vars.slice(i + 1);
   }
 }
 
-if (!path) console.log("Please set the --path");
+if (!path) console.log("Please set the path");
 else if (keys.length == 0)
-  console.log("Please set at least one Tinify API KEY using alias --keys");
+  console.log("Please set at least one Tinify API KEY using alias keys");
 else Optimise(keys, path);
