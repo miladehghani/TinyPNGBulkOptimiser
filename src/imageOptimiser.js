@@ -34,23 +34,6 @@ const optimiseFolder = async (basePath) => {
   });
 };
 
-const optimise = async (basePath, fileName) => {
-  return new Promise(async (resolve, reject) => {
-    const imagePath = path.join(basePath, fileName);
-    const exist = fs.existsSync(imagePath);
-    console.log("imagePath", imagePath);
-    if (getPathes().includes(imagePath)) return resolve();
-    if (!exist) return reject("File not found " + imagePath);
-    const source = Tinify.fromFile(imagePath);
-    source.toFile(imagePath, (err) => {
-      if (!err) {
-        resolve(err);
-        addPath(imagePath);
-      } else reject(err);
-    });
-  });
-};
-
 const tinifyErrorHandler = (err) => {
   if (!err) return;
   else if (err instanceof Tinify.AccountError) {
@@ -73,19 +56,37 @@ const tinifyErrorHandler = (err) => {
   console.log("tinifyErrorHandler, " + err.message);
 };
 
-const validateKey = async (key) => {
-  return new Promise((resolve, reject) => {
-    Tinify.key = key;
-    Tinify.validate((err, data) => {
-      if (!err && Tinify.compressionCount < 500) resolve();
-      else reject(err);
+const optimise = async (basePath, fileName) => {
+  return new Promise(async (resolve, reject) => {
+    const imagePath = path.join(basePath, fileName);
+    const exist = fs.existsSync(imagePath);
+    console.log("imagePath", imagePath);
+    if (getPathes().includes(imagePath)) {
+      console.log("Already optimised");
+      return resolve();
+    }
+    if (!exist) return reject("File not found " + imagePath);
+    const source = Tinify.fromFile(imagePath);
+    source.toFile(imagePath, (err) => {
+      if (!err) {
+        resolve(err);
+        addPath(imagePath);
+      } else reject(err);
     });
   });
+};
+
+const validateKey = async (key) => {
+  Tinify.key = key;
+  const err = await Tinify.validate();
+  if (!err && Tinify.compressionCount < 500) return;
+  return "Invalid Key";
 };
 
 const setApiKey = async (API_KEYS) => {
   for (let i = 0; i < API_KEYS.length; i++) {
     const err = await validateKey(API_KEYS[i]);
+    console.log("validate", err);
     if (!err) return;
   }
   console.log("Out of API_KEY");
